@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuraLake API - Benchmark & Analytics Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f7ff',
+                            100: '#ebf0ff',
+                            200: '#dae2ff',
+                            300: '#bdcbff',
+                            400: '#94a7ff',
+                            500: '#6379ff',
+                            600: '#3e4eff',
+                            700: '#2c39eb',
+                            800: '#232cc2',
+                            900: '#22289c',
+                            950: '#14165e',
+                        },
+                        darkBg: '#090d16',
+                        darkCard: '#111827',
+                        darkBorder: '#1f2937'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .dark body {
+            background-color: #090d16;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #f1f5f9;
+        }
+        .light body {
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #1e293b;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+        .light ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+        }
+        .light ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .light ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16 antialiased">
+
+    <!-- HEADER -->
+    <header class="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-gradient-to-tr from-brand-600 to-violet-600 rounded-xl shadow-lg shadow-brand-500/20">
+                    <i data-lucide="cpu" class="w-6 h-6 text-white animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 to-brand-700 dark:from-white dark:via-slate-200 dark:to-indigo-300 bg-clip-text text-transparent">
+                        NeuraLake API Benchmark
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Análise de Performance, Custos e SLA Bancário</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Theme Toggle -->
+                <button id="themeToggle" onclick="toggleTheme()" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all" title="Alternar tema">
+                    <i data-lucide="sun" class="w-4 h-4 text-amber-500 hidden" id="sunIcon"></i>
+                    <i data-lucide="moon" class="w-4 h-4 text-indigo-400 dark:text-indigo-300" id="moonIcon"></i>
+                </button>
+                <!-- Dropdown de Cenario Rapido -->
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400 hidden md:inline">Visualizar Cenário:</span>
+                    <select id="scenarioSelector" onchange="changeScenario(this.value)" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                        <option value="facil">Pergunta Fácil</option>
+                        <option value="comum">Tarefa Comum</option>
+                        <option value="dificil">Desafio de Código</option>
+                        <option value="complexa" selected>Raciocínio Complexo</option>
+                    </select>
+                </div>
+                <!-- Demo badge -->
+                <span id="datasourceBadge" class="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 bg-amber-500 dark:bg-amber-400 rounded-full"></span>
+                    Aguardando JSON
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+
+        <!-- FILE UPLOAD & OVERVIEW -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Upload Area -->
+            <div class="lg:col-span-2 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between gap-6 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)] hover:border-slate-300 dark:hover:border-slate-700/80 transition-all duration-300">
+                <div>
+                    <div class="flex items-center gap-2 text-brand-600 dark:text-brand-400 mb-2">
+                        <i data-lucide="file-json" class="w-5 h-5"></i>
+                        <span class="text-xs uppercase font-bold tracking-wider">Upload de Dados</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Carregar Resultados do Benchmark</h2>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Arraste ou selecione o arquivo <code class="text-indigo-600 dark:text-indigo-300 bg-indigo-500/10 px-1 py-0.5 rounded font-mono">benchmark_neuralake_*.json</code> gerado pelo script Python para atualizar os dados, gráficos, auditoria e simulações de custo instantaneamente.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Drop Zone -->
+                    <div id="dropzone" class="border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-brand-500/50 bg-slate-50 dark:bg-slate-950/50 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 group">
+                        <input type="file" id="fileInput" accept=".json" class="hidden">
+                        <i data-lucide="upload-cloud" class="w-8 h-8 text-slate-400 dark:text-slate-500 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors mb-2"></i>
+                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300 group-hover:text-brand-600 dark:group-hover:text-white transition-colors">Arraste o JSON aqui</p>
+                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">ou clique para procurar</p>
+                    </div>
+
+                    <!-- Simulator Config -->
+                    <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-4 space-y-3 flex flex-col justify-center">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Volume Mensal:</span>
+                            <span id="volumeValueLabel" class="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">0.0M</span>
+                        </div>
+                        <input type="range" id="volumeSlider" min="100000" max="50000000" step="100000" value="0" oninput="updateVolume(this.value)" class="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500">
+                        <p class="text-[10px] text-slate-500 dark:text-slate-500 leading-normal">
+                            Ajuste a escala estimada de requisições mensais do banco para atualizar dinamicamente as projeções financeiras e a economia do roteamento inteligente.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Insights Card -->
+            <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-[0_4px_30px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
+                <div>
+                    <div class="flex items-center gap-2 text-violet-600 dark:text-violet-400 mb-2">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        <span class="text-xs uppercase font-bold tracking-wider">Resumo Executivo</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Roteador Inteligente</h2>
+                    <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+                        A rota <code class="text-violet-700 dark:text-violet-300 font-mono bg-violet-100 dark:bg-violet-950/40 px-1 py-0.5 rounded">auto</code> equilibra latência e orçamento escolhendo o melhor custo-benefício baseado na dificuldade do prompt.
+                    </p>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="p-3 bg-white dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400">
+                                <i data-lucide="trending-up" class="w-4 h-4"></i>
+                            </div>
+                            <span class="text-xs text-slate-800 dark:text-slate-300 font-medium">Economia Projetada</span>
+                        </div>
+                        <span id="totalSavingsKpi" class="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">--</span>
+                    </div>
+
+                    <div class="p-3 bg-white dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600 dark:text-indigo-400">
+                                <i data-lucide="clock" class="w-4 h-4"></i>
+                            </div>
+                            <span class="text-xs text-slate-800 dark:text-slate-300 font-medium">Média de TTFT (Espera)</span>
+                        </div>
+                        <span id="avgTtftKpi" class="text-sm font-bold font-mono text-indigo-600 dark:text-indigo-400">--</span>
+                    </div>
+
+                    <div class="p-3 bg-white dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-1.5 bg-brand-500/10 rounded-lg text-brand-600 dark:text-brand-400">
+                                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            </div>
+                            <span class="text-xs text-slate-800 dark:text-slate-300 font-medium">Taxa de Sucesso Global</span>
+                        </div>
+                        <span id="globalSuccessKpi" class="text-sm font-bold font-mono text-brand-600 dark:text-brand-400">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. CENÁRIOS E COMPARATIVOS DE DESEMPENHO -->
+        <section class="space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 bg-brand-500 rounded-full shadow-[0_0_8px_rgba(99,102,251,0.6)]"></span>
+                        1. Comparativo de Performance e Consumo por Cenário
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Selecione e compare o comportamento temporal e volumétrico de cada modelo.</p>
+                </div>
+                
+                <!-- Toggle Tab Buttons -->
+                <div class="flex p-0.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-inner w-full sm:w-auto">
+                    <button onclick="changeScenario('facil')" id="tab-facil" class="flex-1 sm:flex-initial text-[11px] font-semibold px-3 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all">Fácil</button>
+                    <button onclick="changeScenario('comum')" id="tab-comum" class="flex-1 sm:flex-initial text-[11px] font-semibold px-3 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all">Comum</button>
+                    <button onclick="changeScenario('dificil')" id="tab-dificil" class="flex-1 sm:flex-initial text-[11px] font-semibold px-3 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all">Difícil</button>
+                    <button onclick="changeScenario('complexa')" id="tab-complexa" class="flex-1 sm:flex-initial text-[11px] font-semibold px-3 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all">Complexo</button>
+                </div>
+            </div>
+
+            <!-- Scenario Intro Box -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200/60 dark:border-slate-800/60 rounded-xl flex flex-col md:flex-row justify-between gap-4 backdrop-blur-md">
+                <div class="space-y-1">
+                    <h4 id="scenarioTitle" class="text-sm font-bold text-slate-900 dark:text-white">Carregando...</h4>
+                    <p id="scenarioDesc" class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">--</p>
+                </div>
+                <div class="p-3 bg-white dark:bg-slate-950/40 rounded-xl border border-slate-200/40 dark:border-slate-800/40 flex flex-col justify-center min-w-[200px]">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500">Prompt de Teste Real</span>
+                    <p id="scenarioPrompt" class="text-xs text-slate-800 dark:text-slate-300 italic font-mono truncate mt-0.5">--</p>
+                </div>
+            </div>
+
+            <!-- PAINEL DE GRÁFICOS LADO A LADO -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 1. Latency Chart Panel -->
+                <div class="lg:col-span-2 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)] flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-xs uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">Análise de Tempo de Resposta (Segundos)</span>
+                            <div class="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-indigo-500/40 rounded"></span> TTFT</span>
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-blue-500 rounded"></span> TTFAT (Espera)</span>
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-purple-500/40 rounded"></span> Raciocínio</span>
+                            </div>
+                        </div>
+                        <div class="relative h-[250px]">
+                            <canvas id="latencyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. NOVO PAINEL DE MÉTRICAS ADICIONAIS -->
+                <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)] flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-xs uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">Métrica Avançada</span>
+                            <select id="metricSelector" onchange="updateAdvancedChart()" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] rounded-lg px-2.5 py-1 focus:outline-none font-semibold">
+                                <option value="tokens">Consumo Médio de Tokens</option>
+                                <option value="costPerMillion">Custo por Milhão de Tokens ($)</option>
+                            </select>
+                        </div>
+                        <div class="relative h-[250px]">
+                            <canvas id="advancedChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela Rápida -->
+            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
+                <span class="text-xs uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-3">Modelos no Cenário Selecionado</span>
+                <div id="modelComparisonList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. AUDITORIA DO ROTEADOR INTELIGENTE ('AUTO') -->
+        <section class="space-y-4">
+            <div class="border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-violet-500 rounded-full shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
+                    2. Auditoria de Roteamento ('auto')
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Análise de assertividade da API 'auto'. O algoritmo deveria encaminhar o prompt para o modelo ideal.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="routerAuditGrid">
+                <!-- Rendered Dynamically via JS -->
+            </div>
+        </section>
+
+        <!-- 3. SIMULADOR FINANCEIRO & PROJEÇÕES MENSAIS -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Table: Monthly Costs Projections -->
+            <div class="lg:col-span-2 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)] flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800/60 pb-3 mb-4 gap-3">
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                            3. Projeção Financeira Mensal Calculada
+                        </h3>
+                        
+                        <!-- FILTRO: Visualizar cenários separados na lista de custos -->
+                        <div class="flex p-0.5 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-inner self-start sm:self-auto">
+                            <button onclick="filterFinancialScenario('all')" id="f-all" class="text-[10px] font-bold px-2 py-1 rounded-md text-white bg-brand-600 transition-all">Todos</button>
+                            <button onclick="filterFinancialScenario('facil')" id="f-facil" class="text-[10px] font-semibold px-2 py-1 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all">Fácil</button>
+                            <button onclick="filterFinancialScenario('comum')" id="f-comum" class="text-[10px] font-semibold px-2 py-1 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all">Comum</button>
+                            <button onclick="filterFinancialScenario('dificil')" id="f-dificil" class="text-[10px] font-semibold px-2 py-1 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all">Difícil</button>
+                            <button onclick="filterFinancialScenario('complexa')" id="f-complexa" class="text-[10px] font-semibold px-2 py-1 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all">Complexo</button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800/80">
+                                    <th class="py-2.5 font-semibold">Modelo</th>
+                                    <th id="col-facil" class="py-2.5 font-semibold text-right">Fácil</th>
+                                    <th id="col-comum" class="py-2.5 font-semibold text-right">Comum</th>
+                                    <th id="col-dificil" class="py-2.5 font-semibold text-right">Difícil</th>
+                                    <th id="col-complexa" class="py-2.5 font-semibold text-right">Complexo</th>
+                                    <th class="py-2.5 font-semibold text-right text-brand-600 dark:text-brand-400" id="col-media-label">Média/Mês</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financialTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/40">
+                                <!-- Rendered via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-4 italic leading-relaxed">
+                    * Os custos incluem tokens de entrada, saída e raciocínio (que são cobrados como tokens de saída normais). O modelo 'auto' é cobrado pelo custo real do modelo selecionado pelo roteador.
+                </p>
+            </div>
+
+            <!-- Cost Proportion and Savings summary -->
+            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
+                <div>
+                    <span class="text-xs uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-3">Custos de Pensamento (Ocultos)</span>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+                        Modelos reasoning gastam processamento interno de "cabeça" antes de responder. Estes tokens invisíveis ao usuário final influenciam no orçamento.
+                    </p>
+                    <div class="relative h-[180px] mb-4">
+                        <canvas id="costChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-brand-500/5 border border-brand-500/15 rounded-xl text-center space-y-1">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-medium">Economia Projetada c/ 'Auto'</span>
+                    <span id="savingsYearlyLabel" class="text-base font-extrabold text-emerald-600 dark:text-emerald-400 block font-mono">--</span>
+                    <span class="text-[9px] text-slate-500 block">economizado vs usar sempre Reasoning-Pro</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. SLA & CONFIABILIDADE -->
+        <section class="space-y-4">
+            <div class="border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                    4. Métricas de Confiabilidade & SLA Bancário
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Visão de estabilidade baseada em retries, taxa de falhas e o pior caso de latência (p99/max) observado nas amostras.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="reliabilityGrid">
+                <!-- Dynamically Rendered via JS -->
+            </div>
+        </section>
+
+        <!-- 5. RELATÓRIO TÉCNICO COMPLETO -->
+        <section class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i data-lucide="table" class="w-4 h-4 text-brand-600 dark:text-brand-400"></i>
+                        5. Relatório Técnico Detalhado
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Todos os dados numéricos consolidados das amostras coletadas durante o benchmark.</p>
+                </div>
+                
+                <!-- Barra de Busca + Novo Filtro de Cenários da Seção Técnica -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <!-- FILTRO NOVO: Visualizar cenários separados no Relatório Técnico -->
+                    <div class="flex p-0.5 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-inner w-full sm:w-auto">
+                        <button onclick="filterTechnicalScenario('all')" id="ft-all" class="text-[10px] font-bold px-2.5 py-1.5 rounded-md text-white bg-brand-600 transition-all">Todos</button>
+                        <button onclick="filterTechnicalScenario('facil')" id="ft-facil" class="text-[10px] font-semibold px-2.5 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all">Fácil</button>
+                        <button onclick="filterTechnicalScenario('comum')" id="ft-comum" class="text-[10px] font-semibold px-2.5 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all">Comum</button>
+                        <button onclick="filterTechnicalScenario('dificil')" id="ft-dificil" class="text-[10px] font-semibold px-2.5 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all">Difícil</button>
+                        <button onclick="filterTechnicalScenario('complexa')" id="ft-complexa" class="text-[10px] font-semibold px-2.5 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all">Complexo</button>
+                    </div>
+
+                    <div class="relative w-full sm:w-64">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"></i>
+                        <input type="text" id="techTableSearch" oninput="onTechTableSearchChange(this.value)" placeholder="Filtrar por modelo..." class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 text-xs text-slate-800 dark:text-slate-300 rounded-xl pl-9 pr-4 py-2 w-full focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs whitespace-nowrap">
+                    <thead>
+                        <tr class="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                            <th class="py-2.5 font-semibold">Modelo</th>
+                            <th class="py-2.5 font-semibold">Cenário</th>
+                            <th class="py-2.5 font-semibold text-right">In Tokens</th>
+                            <th class="py-2.5 font-semibold text-right">Reasoning</th>
+                            <th class="py-2.5 font-semibold text-right">Visible</th>
+                            <th class="py-2.5 font-semibold text-right">% Pensa</th>
+                            <th class="py-2.5 font-semibold text-right text-indigo-600 dark:text-indigo-400">TTFT (s)</th>
+                            <th class="py-2.5 font-semibold text-right text-brand-600 dark:text-brand-400 font-bold">TTFAT (s)</th>
+                            <th class="py-2.5 font-semibold text-right">Gen (s)</th>
+                            <th class="py-2.5 font-semibold text-right">Tok/s T</th>
+                            <th class="py-2.5 font-semibold text-right">Tok/s V</th>
+                            <th class="py-2.5 font-semibold text-right text-emerald-600 dark:text-emerald-400">Custo unit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="technicalTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/40">
+                        <!-- Rendered via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 pt-8 border-t border-slate-200 dark:border-slate-800/60 text-center text-xs text-slate-500 space-y-1">
+        <p>Dashboard de Benchmark da API NeuraLake - Desenvolvido para avaliações de tecnologia comercial.</p>
+        <p>Tecnologias: HTML5, Tailwind CSS, Chart.js & Lucide Icons.</p>
+    </footer>
+
+    <!-- APP SCRIPT -->
+    <script>
+        const CENARIOS = {
+          "facil": {
+            "nome": "Pergunta Fácil (factual)",
+            "prompt": "Qual é a capital da França? Responda em apenas uma frase direta.",
+            "rotas_ideais": ["text"],
+            "explicacao": "Pergunta trivial. O roteador deveria usar o modelo mais barato para otimizar orçamento."
+          },
+          "comum": {
+            "nome": "Tarefa Comum (e-mail profissional)",
+            "prompt": "Escreva um e-mail curto e profissional cobrando educadamente o atraso no envio de um relatório de vendas.",
+            "rotas_ideais": ["text"],
+            "explicacao": "Tarefa cotidiana padrão. Modelos avançados ou com pensamento denso são desperdício financeiro."
+          },
+          "dificil": {
+            "nome": "Desafio de Código (algoritmo)",
+            "prompt": "Escreva uma query PostgreSQL otimizada para buscar os 10 clientes com maior AUM (Assets Under Management)...",
+            "rotas_ideais": ["code", "reasoning"],
+            "explicacao": "Programação especializada. Demanda sintaxe apurada ou modelo focado em codificação."
+          },
+          "complexa": {
+            "nome": "Raciocínio Complexo (matemática financeira)",
+            "prompt": "Um cliente XP tem R$ 500.000. 60% em CDB (110% do CDI) e 40% em fundo de ações (queda de 5%)...",
+            "rotas_ideais": ["reasoning", "reasoning-pro"],
+            "explicacao": "Cálculo com múltiplas etapas lógicas. Ideal usar modelos que gastam processamento pensando antes."
+          }
+        };
+
+        // INICIALIZAÇÃO COMPLETAMENTE ZERADA
+        let activeData = {
+          "resultados": {},
+          "confiabilidade": {},
+          "volume_projetado_mes": 0
+        };
+        
+        let selectedScenario = "complexa";
+        let selectedFinancialFilter = "all"; // all, facil, comum, dificil, complexa
+        let selectedTechnicalFilter = "all"; // all, facil, comum, dificil, complexa
+        let searchTechnicalQuery = "";
+        let latencyChartInstance = null;
+        let advancedChartInstance = null;
+        let costChartInstance = null;
+
+        // Theme toggle functions
+        function toggleTheme() {
+            const html = document.documentElement;
+            const sun = document.getElementById('sunIcon');
+            const moon = document.getElementById('moonIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                sun.classList.remove('hidden');
+                moon.classList.add('hidden');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.remove('light');
+                html.classList.add('dark');
+                sun.classList.add('hidden');
+                moon.classList.remove('hidden');
+                localStorage.setItem('theme', 'dark');
+            }
+            updateChartTheme();
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const html = document.documentElement;
+            const sun = document.getElementById('sunIcon');
+            const moon = document.getElementById('moonIcon');
+            if (saved === 'light') {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                sun.classList.remove('hidden');
+                moon.classList.add('hidden');
+            } else {
+                html.classList.add('dark');
+                sun.classList.add('hidden');
+                moon.classList.remove('hidden');
+            }
+        }
+
+        function updateChartTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+            const tickColor = isDark ? '#94a3b8' : '#64748b';
+            
+            [latencyChartInstance, advancedChartInstance].forEach(chart => {
+                if (chart) {
+                    chart.options.scales.x.grid.color = gridColor;
+                    chart.options.scales.y.grid.color = gridColor;
+                    chart.options.scales.x.ticks.color = tickColor;
+                    chart.options.scales.y.ticks.color = tickColor;
+                    chart.update();
+                }
+            });
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            lucide.createIcons();
+            initCharts();
+            renderDashboard();
+            setupDragAndDrop();
+        });
+
+        function setupDragAndDrop() {
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropzone.addEventListener('click', () => fileInput.click());
+
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('border-brand-500', 'bg-slate-100', 'dark:bg-slate-900/50');
+            });
+
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('border-brand-500', 'bg-slate-100', 'dark:bg-slate-900/50');
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('border-brand-500', 'bg-slate-100', 'dark:bg-slate-900/50');
+                const file = e.dataTransfer.files[0];
+                if (file) handleFile(file);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) handleFile(file);
+            });
+        }
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.resultados && parsed.confiabilidade) {
+                        activeData = parsed;
+                        
+                        if (parsed.volume_projetado_mes) {
+                            document.getElementById('volumeSlider').value = parsed.volume_projetado_mes;
+                            document.getElementById('volumeValueLabel').innerText = (parsed.volume_projetado_mes / 1000000).toFixed(1) + 'M';
+                        } else {
+                            document.getElementById('volumeSlider').value = 5000000;
+                            activeData.volume_projetado_mes = 5000000;
+                            document.getElementById('volumeValueLabel').innerText = '5.0M';
+                        }
+
+                        const badge = document.getElementById('datasourceBadge');
+                        badge.className = "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-[0_0_10px_rgba(99,102,241,0.05)]";
+                        badge.innerHTML = `<span class="w-1.5 h-1.5 bg-indigo-500 dark:bg-indigo-400 rounded-full"></span> JSON Importado`;
+
+                        renderDashboard();
+                        alert("Resultados do benchmark carregados com sucesso!");
+                    } else {
+                        alert("O JSON não contém uma estrutura de benchmark válida.");
+                    }
+                } catch(err) {
+                    alert("Erro ao ler arquivo JSON: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateVolume(val) {
+            activeData.volume_projetado_mes = parseInt(val);
+            document.getElementById('volumeValueLabel').innerText = (val / 1000000).toFixed(1) + 'M';
+            renderDashboard();
+        }
+
+        function changeScenario(scenarioId) {
+            selectedScenario = scenarioId;
+            document.getElementById('scenarioSelector').value = scenarioId;
+            
+            ['facil', 'comum', 'dificil', 'complexa'].forEach(id => {
+                const btn = document.getElementById('tab-' + id);
+                if (id === scenarioId) {
+                    btn.className = "flex-1 sm:flex-initial text-[11px] font-bold px-3 py-1.5 rounded-lg text-white bg-brand-600 shadow-sm transition-all";
+                } else {
+                    btn.className = "flex-1 sm:flex-initial text-[11px] font-semibold px-3 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all";
+                }
+            });
+
+            renderDashboard();
+        }
+
+        function filterFinancialScenario(scenarioFilter) {
+            selectedFinancialFilter = scenarioFilter;
+            
+            ['all', 'facil', 'comum', 'dificil', 'complexa'].forEach(id => {
+                const btn = document.getElementById('f-' + id);
+                if (id === scenarioFilter) {
+                    btn.className = "text-[10px] font-bold px-2 py-1 rounded-md text-white bg-brand-600 transition-all";
+                } else {
+                    btn.className = "text-[10px] font-semibold px-2 py-1 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all";
+                }
+            });
+
+            const vol = activeData.volume_projetado_mes || 0;
+            renderFinancialTable(vol);
+        }
+
+        // NOVO FILTRO: Controla o filtro por botão da tabela técnica
+        function filterTechnicalScenario(scenarioFilter) {
+            selectedTechnicalFilter = scenarioFilter;
+            
+            ['all', 'facil', 'comum', 'dificil', 'complexa'].forEach(id => {
+                const btn = document.getElementById('ft-' + id);
+                if (id === scenarioFilter) {
+                    btn.className = "text-[10px] font-bold px-2.5 py-1.5 rounded-md text-white bg-brand-600 transition-all";
+                } else {
+                    btn.className = "text-[10px] font-semibold px-2.5 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all";
+                }
+            });
+
+            applyTechnicalFilters();
+        }
+
+        // NOVO FILTRO: Controla a barra de pesquisa por texto da tabela técnica
+        function onTechTableSearchChange(val) {
+            searchTechnicalQuery = val.toLowerCase();
+            applyTechnicalFilters();
+        }
+
+        // NOVO FILTRO: Executa a união dos dois filtros (Botão + Busca)
+        function applyTechnicalFilters() {
+            const rows = document.querySelectorAll('.tech-table-row');
+            rows.forEach(row => {
+                const model = row.getAttribute('data-model');
+                const scenario = row.getAttribute('data-scenario');
+                
+                // Valida filtro do botão
+                const matchesScenario = selectedTechnicalFilter === 'all' || selectedTechnicalFilter === scenario;
+                // Valida busca textual (filtra por modelo)
+                const matchesSearch = model.includes(searchTechnicalQuery);
+
+                if (matchesScenario && matchesSearch) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function renderDashboard() {
+            const vol = activeData.volume_projetado_mes || 0;
+            const scInfo = CENARIOS[selectedScenario];
+            
+            document.getElementById('scenarioTitle').innerText = scInfo.nome;
+            document.getElementById('scenarioDesc').innerText = scInfo.explicacao;
+            document.getElementById('scenarioPrompt').innerText = `"${scInfo.prompt}"`;
+
+            updateKpis(vol);
+            renderModelComparisonList();
+            renderRouterAudit(vol);
+            renderFinancialTable(vol);
+            renderReliabilityGrid();
+            renderTechnicalTable();
+            updateCharts();
+        }
+
+        function updateKpis(vol) {
+            let totalCalls = 0;
+            let okCalls = 0;
+            let totalTtftSum = 0;
+            let ttftCount = 0;
+
+            if (activeData.confiabilidade && Object.keys(activeData.confiabilidade).length > 0) {
+                Object.entries(activeData.confiabilidade).forEach(([model, stats]) => {
+                    totalCalls += (stats.ok || 0) + (stats.falhas || 0);
+                    okCalls += (stats.ok || 0);
+                });
+            }
+
+            const successRate = totalCalls > 0 ? ((okCalls / totalCalls) * 100).toFixed(1) + '%' : '0.0%';
+            document.getElementById('globalSuccessKpi').innerText = successRate;
+
+            if (activeData.resultados && Object.keys(activeData.resultados).length > 0) {
+                Object.values(activeData.resultados).forEach(scenarios => {
+                    if (scenarios[selectedScenario] && scenarios[selectedScenario].ttft) {
+                        totalTtftSum += scenarios[selectedScenario].ttft.media;
+                        ttftCount++;
+                    }
+                });
+            }
+            const avgTtft = ttftCount > 0 ? (totalTtftSum / ttftCount).toFixed(2) + 's' : '--';
+            document.getElementById('avgTtftKpi').innerText = avgTtft;
+
+            const monthlySavings = calculateRoutingMonthlySavings(vol);
+            document.getElementById('totalSavingsKpi').innerText = monthlySavings > 0 
+                ? `$${monthlySavings.toLocaleString('en-US', {maximumFractionDigits: 2})}/mês`
+                : `$0/mês`;
+            
+            document.getElementById('savingsYearlyLabel').innerText = monthlySavings > 0
+                ? `$${(monthlySavings * 12).toLocaleString('en-US', {maximumFractionDigits: 0})}/ano`
+                : `$0/ano`;
+        }
+
+        function calculateRoutingMonthlySavings(vol) {
+            if (!activeData.resultados || Object.keys(activeData.resultados).length === 0) return 0;
+            
+            let totalProCost = 0;
+            let totalAutoCost = 0;
+            let scenarioCount = 0;
+
+            Object.keys(CENARIOS).forEach(scKey => {
+                const proSc = activeData.resultados['reasoning-pro']?.[scKey];
+                const autoSc = activeData.resultados['auto']?.[scKey];
+                if (proSc && autoSc) {
+                    totalProCost += proSc.cost.media;
+                    totalAutoCost += autoSc.cost.media;
+                    scenarioCount++;
+                }
+            });
+
+            if (scenarioCount === 0) return 0;
+            const avgProCost = totalProCost / scenarioCount;
+            const avgAutoCost = totalAutoCost / scenarioCount;
+
+            return Math.max(0, (avgProCost - avgAutoCost) * vol);
+        }
+
+        function renderModelComparisonList() {
+            const container = document.getElementById('modelComparisonList');
+            container.innerHTML = '';
+
+            if (!activeData.resultados || Object.keys(activeData.resultados).length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center text-center py-6 text-slate-400 dark:text-slate-500">
+                        <i data-lucide="info" class="w-6 h-6 mb-1 text-slate-300 dark:text-slate-700"></i>
+                        <p class="text-xs">Faça o upload do JSON para comparar os modelos em tempo real.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            const modelSpeeds = [];
+            Object.entries(activeData.resultados).forEach(([model, scenarios]) => {
+                const metrics = scenarios[selectedScenario];
+                if (metrics) {
+                    modelSpeeds.push({ model, metrics });
+                }
+            });
+
+            modelSpeeds.sort((a, b) => a.metrics.cost.media - b.metrics.cost.media);
+            const minCost = Math.min(...modelSpeeds.map(m => m.metrics.cost.media));
+
+            modelSpeeds.forEach(({ model, metrics }) => {
+                const isAuto = model === 'auto';
+                const hasThinking = metrics.reasoning_tokens_medio > 0;
+                const costMedia = metrics.cost.media;
+                const factor = minCost > 0 ? costMedia / minCost : 1;
+
+                let costLabel = factor <= 1.005 
+                    ? `<span class="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">Mais Barato</span>`
+                    : `<span class="text-slate-500 dark:text-slate-400 text-[10px] font-mono">${factor.toFixed(1)}x custo</span>`;
+
+                const ttfat = metrics.ttfat.media;
+                let speedLabel = ttfat < 0.2 ? '⚡ Instantâneo' : ttfat < 1.0 ? '🙂 Rápido' : ttfat < 4.0 ? '⏳ Perceptível' : '🐢 Lento';
+
+                const cardHtml = `
+                    <div class="p-3 bg-slate-50 dark:bg-slate-950/40 hover:bg-slate-100 dark:hover:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800/60 transition-all flex justify-between items-center ${isAuto ? 'ring-1 ring-violet-500/30 bg-violet-500/5 dark:bg-violet-950/10' : ''}">
+                        <div class="space-y-0.5">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-extrabold text-slate-900 dark:text-white capitalize">${model}</span>
+                                ${isAuto ? `<span class="bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[8px] font-bold uppercase tracking-widest px-1 py-0.2 rounded border border-violet-500/20">Roteador</span>` : ''}
+                            </div>
+                            <div class="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
+                                <span class="font-medium">${speedLabel} (${ttfat.toFixed(2)}s)</span>
+                                ${hasThinking ? `<span class="text-purple-600 dark:text-purple-400 flex items-center gap-0.5"><i data-lucide="brain" class="w-3 h-3"></i> ${metrics.thinking_time.media.toFixed(1)}s</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-right space-y-0.5">
+                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">$${costMedia.toFixed(6)}</span>
+                            <div class="flex justify-end">${costLabel}</div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            });
+            lucide.createIcons();
+        }
+
+        function renderRouterAudit(vol) {
+            const container = document.getElementById('routerAuditGrid');
+            container.innerHTML = '';
+
+            if (!activeData.resultados || Object.keys(activeData.resultados).length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-8 text-center text-slate-400 dark:text-slate-500">
+                        Aguardando importação de dados para auditar as decisões de rota inteligente.
+                    </div>
+                `;
+                return;
+            }
+
+            Object.entries(CENARIOS).forEach(([scKey, info]) => {
+                const autoMet = activeData.resultados['auto']?.[scKey];
+                if (!autoMet) return;
+
+                const modelRealName = autoMet.modelo_real;
+                const category = autoMet.categoria_preco;
+                const isAdequate = info.rotas_ideais.includes(category);
+                
+                const proMet = activeData.resultados['reasoning-pro']?.[scKey];
+                let economyHtml = '';
+                if (proMet) {
+                    const diff = proMet.cost.media - autoMet.cost.media;
+                    const diffScale = diff * vol;
+                    economyHtml = diffScale >= 0 
+                        ? `<span class="text-emerald-600 dark:text-emerald-400 font-bold font-mono">+$${diffScale.toLocaleString('en-US', {maximumFractionDigits: 0})}/mês</span>`
+                        : `<span class="text-rose-600 dark:text-rose-400 font-bold font-mono">-$${Math.abs(diffScale).toLocaleString('en-US', {maximumFractionDigits: 0})}/mês</span>`;
+                }
+
+                const auditCard = `
+                    <div class="bg-white dark:bg-slate-900/40 border ${isAdequate ? 'border-slate-200 dark:border-slate-800/80 hover:border-emerald-500/30' : 'border-slate-200 dark:border-slate-800/80 hover:border-amber-500/30'} rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.15)] flex flex-col justify-between gap-4 transition-all duration-300">
+                        <div>
+                            <div class="flex justify-between items-start gap-2 mb-2">
+                                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 truncate max-w-[130px]">${info.nome}</span>
+                                ${isAdequate 
+                                    ? '<span class="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Ideal</span>'
+                                    : '<span class="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i> Alerta</span>'
+                                }
+                            </div>
+                            
+                            <div class="p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-2 mt-2">
+                                <div class="flex items-center justify-between text-[10px]">
+                                    <span class="text-slate-500 font-medium">Auto Roteou para:</span>
+                                    <span class="bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/20 font-bold px-1.5 py-0.2 rounded font-mono capitalize">${category}</span>
+                                </div>
+                                <div class="text-[11px] text-slate-800 dark:text-slate-300 font-mono truncate font-semibold">${modelRealName}</div>
+                                <div class="h-[1px] bg-slate-200 dark:bg-slate-800/80"></div>
+                                <div class="flex items-center justify-between text-[10px]">
+                                    <span class="text-slate-500 font-medium">Rotas corretas:</span>
+                                    <span class="text-slate-700 dark:text-slate-300 font-semibold capitalize">${info.rotas_ideais.join(', ')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center text-[11px] pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                            <span class="text-slate-500 font-medium">Economia vs Pro:</span>
+                            ${economyHtml}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', auditCard);
+            });
+            lucide.createIcons();
+        }
+
+        function renderFinancialTable(vol) {
+            const tbody = document.getElementById('financialTableBody');
+            tbody.innerHTML = '';
+
+            const colFacil = document.getElementById('col-facil');
+            const colComum = document.getElementById('col-comum');
+            const colDificil = document.getElementById('col-dificil');
+            const colComplexa = document.getElementById('col-complexa');
+            const colMediaLabel = document.getElementById('col-media-label');
+
+            if (selectedFinancialFilter === 'all') {
+                colFacil.style.display = '';
+                colComum.style.display = '';
+                colDificil.style.display = '';
+                colComplexa.style.display = '';
+                colMediaLabel.innerText = 'Média/Mês';
+            } else {
+                colFacil.style.display = selectedFinancialFilter === 'facil' ? '' : 'none';
+                colComum.style.display = selectedFinancialFilter === 'comum' ? '' : 'none';
+                colDificil.style.display = selectedFinancialFilter === 'dificil' ? '' : 'none';
+                colComplexa.style.display = selectedFinancialFilter === 'complexa' ? '' : 'none';
+                colMediaLabel.innerText = 'Custo Ativo/Mês';
+            }
+
+            const models = ["text", "code", "multimodal", "reasoning", "reasoning-pro", "auto"];
+            models.forEach(model => {
+                const rowCells = [];
+                let totalCostSum = 0;
+                let count = 0;
+
+                const scenariosToEval = ["facil", "comum", "dificil", "complexa"];
+                scenariosToEval.forEach(scKey => {
+                    const metrics = activeData.resultados?.[model]?.[scKey];
+                    const cellCost = metrics ? metrics.cost.media * vol : 0;
+                    const isVisible = selectedFinancialFilter === 'all' || selectedFinancialFilter === scKey;
+
+                    if (metrics) {
+                        if (isVisible) {
+                            totalCostSum += metrics.cost.media;
+                            count++;
+                        }
+                        rowCells.push(`<td class="py-2.5 text-right font-mono text-slate-800 dark:text-slate-200" style="display: ${isVisible ? '' : 'none'}">$${cellCost.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>`);
+                    } else {
+                        rowCells.push(`<td class="py-2.5 text-right text-slate-400 dark:text-slate-500 font-mono" style="display: ${isVisible ? '' : 'none'}">—</td>`);
+                    }
+                });
+
+                const avgMonthly = count > 0 ? (totalCostSum / count) * vol : 0;
+                const isAuto = model === 'auto';
+
+                const rowHtml = `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/20 ${isAuto ? 'bg-violet-500/5 dark:bg-violet-950/5' : ''}">
+                        <td class="py-2.5 font-bold capitalize text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                            ${model}
+                            ${isAuto ? '<span class="bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[8px] font-extrabold uppercase px-1 rounded">Auto</span>' : ''}
+                        </td>
+                        ${rowCells.join('')}
+                        <td class="py-2.5 text-right font-mono font-extrabold text-brand-600 dark:text-brand-400">
+                            $${avgMonthly.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', rowHtml);
+            });
+        }
+
+        function renderReliabilityGrid() {
+            const container = document.getElementById('reliabilityGrid');
+            container.innerHTML = '';
+
+            if (!activeData.confiabilidade || Object.keys(activeData.confiabilidade).length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-8 text-center text-slate-400 dark:text-slate-500">
+                        Faça o upload do JSON para mapear as métricas de confiabilidade bancária e SLA.
+                    </div>
+                `;
+                return;
+            }
+
+            Object.entries(activeData.confiabilidade).forEach(([model, stats]) => {
+                const total = (stats.ok || 0) + (stats.falhas || 0);
+                const successRate = total > 0 ? ((stats.ok / total) * 100).toFixed(1) : '0.0';
+                const retries = stats.retries || 0;
+                
+                let worstLatency = 0;
+                if (activeData.resultados?.[model]) {
+                    Object.values(activeData.resultados[model]).forEach(sc => {
+                        if (sc.total_time && sc.total_time.max > worstLatency) {
+                            worstLatency = sc.total_time.max;
+                        }
+                    });
+                }
+
+                const isAuto = model === 'auto';
+                let healthStatus = parseFloat(successRate) >= 100.0 && retries === 0
+                    ? '<span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>'
+                    : parseFloat(successRate) >= 95.0 
+                        ? '<span class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>'
+                        : '<span class="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(248,113,113,0.8)]"></span>';
+
+                const cardHtml = `
+                    <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between gap-4 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.15)] transition-all duration-300">
+                        <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/60 pb-2.5">
+                            <div class="flex items-center gap-2">
+                                ${healthStatus}
+                                <span class="text-xs font-bold capitalize text-slate-900 dark:text-white">${model}</span>
+                            </div>
+                            ${isAuto ? '<span class="bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[8px] font-bold px-1.5 py-0.2 rounded border border-violet-500/20 uppercase">Roteador</span>' : ''}
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div class="p-2 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800/40">
+                                <span class="text-[9px] text-slate-500 font-medium block uppercase">Sucesso</span>
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">${successRate}%</span>
+                            </div>
+                            <div class="p-2 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800/40">
+                                <span class="text-[9px] text-slate-500 font-medium block uppercase">Retries</span>
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">${retries}</span>
+                            </div>
+                            <div class="p-2 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800/40">
+                                <span class="text-[9px] text-slate-500 font-medium block uppercase">Max Latência</span>
+                                <span class="text-xs font-bold text-brand-600 dark:text-brand-400 font-mono">${worstLatency.toFixed(2)}s</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        function renderTechnicalTable() {
+            const tbody = document.getElementById('technicalTableBody');
+            tbody.innerHTML = '';
+
+            if (!activeData.resultados || Object.keys(activeData.resultados).length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="12" class="py-8 text-center text-slate-500">
+                            Nenhum dado consolidado. Faça o upload do JSON para popular o relatório técnico.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            Object.entries(activeData.resultados).forEach(([model, scenarios]) => {
+                Object.entries(scenarios).forEach(([scKey, metrics]) => {
+                    const rowHtml = `
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/20 text-slate-700 dark:text-slate-300 tech-table-row" 
+                            data-model="${model.toLowerCase()}" 
+                            data-scenario="${scKey.toLowerCase()}">
+                            <td class="py-2.5 font-bold capitalize text-slate-900 dark:text-slate-200">${model}</td>
+                            <td class="py-2.5 capitalize text-slate-500 dark:text-slate-400">${scKey}</td>
+                            <td class="py-2.5 text-right font-mono">${metrics.tokens_in_medio.toFixed(0)}</td>
+                            <td class="py-2.5 text-right font-mono">${metrics.reasoning_tokens_medio.toFixed(0)}</td>
+                            <td class="py-2.5 text-right font-mono">${metrics.visible_tokens_medio.toFixed(0)}</td>
+                            <td class="py-2.5 text-right font-mono text-purple-600 dark:text-purple-400">${metrics.pct_tokens_pensamento.toFixed(1)}%</td>
+                            <td class="py-2.5 text-right font-mono text-indigo-600 dark:text-indigo-400">${metrics.ttft.media.toFixed(3)}s</td>
+                            <td class="py-2.5 text-right font-mono text-brand-600 dark:text-brand-400 font-semibold">${metrics.ttfat.media.toFixed(3)}s</td>
+                            <td class="py-2.5 text-right font-mono">${metrics.generation_time.media.toFixed(2)}s</td>
+                            <td class="py-2.5 text-right font-mono">${metrics.tokens_per_sec_total.media.toFixed(1)}</td>
+                            <td class="py-2.5 text-right font-mono">${metrics.tokens_per_sec_visible.media.toFixed(1)}</td>
+                            <td class="py-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold">$${metrics.cost.media.toFixed(6)}</td>
+                        </tr>
+                    `;
+                    tbody.insertAdjacentHTML('beforeend', rowHtml);
+                });
+            });
+
+            // Aplica os filtros logo após renderizar para manter as seleções de estados do usuário
+            applyTechnicalFilters();
+        }
+
+        // Charts Initialization
+        function initCharts() {
+            // 1. Latency Bar Chart
+            const ctxLat = document.getElementById('latencyChart').getContext('2d');
+            latencyChartInstance = new Chart(ctxLat, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'TTFT (s)',
+                            data: [],
+                            backgroundColor: 'rgba(99, 102, 241, 0.35)',
+                            borderColor: 'rgba(99, 102, 241, 0.8)',
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'TTFAT (s) - Espera',
+                            data: [],
+                            backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Tempo de Raciocínio (s)',
+                            data: [],
+                            backgroundColor: 'rgba(168, 85, 247, 0.35)',
+                            borderColor: 'rgba(168, 85, 247, 0.8)',
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#0f172a', titleFont: { family: 'Inter', weight: 'bold' } }
+                    }
+                }
+            });
+
+            // 2. Advanced Metric Multi-Chart
+            const ctxAdv = document.getElementById('advancedChart').getContext('2d');
+            advancedChartInstance = new Chart(ctxAdv, {
+                type: 'bar',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } } },
+                        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } } }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 9 }, usePointStyle: true } },
+                        tooltip: { backgroundColor: '#0f172a' }
+                    }
+                }
+            });
+
+            // 3. Cost Doughnut Chart
+            const ctxCost = document.getElementById('costChart').getContext('2d');
+            costChartInstance = new Chart(ctxCost, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Tokens Resposta', 'Tokens Raciocínio (Pensamento)'],
+                    datasets: [{
+                        data: [100, 0],
+                        backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(168, 85, 247, 0.7)'],
+                        borderColor: ['#0f172a', '#0f172a'],
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter', size: 9 }, usePointStyle: true } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (!latencyChartInstance || !advancedChartInstance || !costChartInstance) return;
+
+            const labels = [];
+            const ttftData = [];
+            const ttfatData = [];
+            const thinkingData = [];
+
+            if (!activeData.resultados || Object.keys(activeData.resultados).length === 0) {
+                latencyChartInstance.data.labels = [];
+                latencyChartInstance.data.datasets[0].data = [];
+                latencyChartInstance.data.datasets[1].data = [];
+                latencyChartInstance.data.datasets[2].data = [];
+                latencyChartInstance.update();
+
+                advancedChartInstance.data.labels = [];
+                advancedChartInstance.data.datasets = [];
+                advancedChartInstance.update();
+
+                costChartInstance.data.datasets[0].data = [100, 0];
+                costChartInstance.update();
+                return;
+            }
+
+            Object.entries(activeData.resultados).forEach(([model, scenarios]) => {
+                const metrics = scenarios[selectedScenario];
+                if (metrics) {
+                    labels.push(model.toUpperCase());
+                    ttftData.push(metrics.ttft.media);
+                    ttfatData.push(metrics.ttfat.media);
+                    thinkingData.push(metrics.thinking_time ? metrics.thinking_time.media : 0);
+                }
+            });
+
+            latencyChartInstance.data.labels = labels;
+            latencyChartInstance.data.datasets[0].data = ttftData;
+            latencyChartInstance.data.datasets[1].data = ttfatData;
+            latencyChartInstance.data.datasets[2].data = thinkingData;
+            latencyChartInstance.update();
+
+            updateAdvancedChart();
+
+            let totalReasoningTok = 0;
+            let totalVisibleTok = 0;
+            Object.values(activeData.resultados).forEach(scenarios => {
+                Object.values(scenarios).forEach(metrics => {
+                    if (metrics.reasoning_tokens_medio) totalReasoningTok += metrics.reasoning_tokens_medio;
+                    if (metrics.visible_tokens_medio) totalVisibleTok += metrics.visible_tokens_medio;
+                });
+            });
+
+            const total = totalReasoningTok + totalVisibleTok;
+            if (total > 0) {
+                const thoughtPct = (totalReasoningTok / total) * 100;
+                const visiblePct = (totalVisibleTok / total) * 100;
+                costChartInstance.data.datasets[0].data = [visiblePct.toFixed(1), thoughtPct.toFixed(1)];
+            } else {
+                costChartInstance.data.datasets[0].data = [100, 0];
+            }
+            costChartInstance.update();
+        }
+
+        function updateAdvancedChart() {
+            if (!advancedChartInstance || !activeData.resultados || Object.keys(activeData.resultados).length === 0) return;
+
+            const selectedMetric = document.getElementById('metricSelector').value;
+            const labels = [];
+            
+            if (selectedMetric === 'tokens') {
+                const datasetIn = [];
+                const datasetOutVisible = [];
+                const datasetOutReasoning = [];
+
+                Object.entries(activeData.resultados).forEach(([model, scenarios]) => {
+                    const metrics = scenarios[selectedScenario];
+                    if (metrics) {
+                        labels.push(model.toUpperCase());
+                        datasetIn.push(metrics.tokens_in_medio);
+                        datasetOutVisible.push(metrics.visible_tokens_medio);
+                        datasetOutReasoning.push(metrics.reasoning_tokens_medio || 0);
+                    }
+                });
+
+                advancedChartInstance.data.labels = labels;
+                advancedChartInstance.data.datasets = [
+                    {
+                        label: 'Input (Prompt)',
+                        data: datasetIn,
+                        backgroundColor: 'rgba(59, 130, 246, 0.4)',
+                        borderColor: 'rgba(59, 130, 246, 0.8)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Output Visível (Resposta)',
+                        data: datasetOutVisible,
+                        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                        borderColor: 'rgba(16, 185, 129, 0.9)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Output Oculto (Pensamento)',
+                        data: datasetOutReasoning,
+                        backgroundColor: 'rgba(168, 85, 247, 0.5)',
+                        borderColor: 'rgba(168, 85, 247, 0.8)',
+                        borderWidth: 1
+                    }
+                ];
+                advancedChartInstance.options.scales.x.stacked = true;
+                advancedChartInstance.options.scales.y.stacked = true;
+
+            } else if (selectedMetric === 'costPerMillion') {
+                const datasetCost = [];
+
+                Object.entries(activeData.resultados).forEach(([model, scenarios]) => {
+                    const metrics = scenarios[selectedScenario];
+                    if (metrics) {
+                        labels.push(model.toUpperCase());
+                        const costPerMillionRequests = metrics.cost.media * 1000000;
+                        datasetCost.push(costPerMillionRequests);
+                    }
+                });
+
+                advancedChartInstance.data.labels = labels;
+                advancedChartInstance.data.datasets = [
+                    {
+                        label: 'Custo por 1M de Requisições ($)',
+                        data: datasetCost,
+                        backgroundColor: 'rgba(245, 158, 11, 0.6)',
+                        borderColor: 'rgba(245, 158, 11, 0.9)',
+                        borderWidth: 1
+                    }
+                ];
+                advancedChartInstance.options.scales.x.stacked = false;
+                advancedChartInstance.options.scales.y.stacked = false;
+            }
+
+            advancedChartInstance.update();
+        }
+
+    </script>
+</body>
+</html>
